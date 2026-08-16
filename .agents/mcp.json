@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "cover-letter-mcp": {
+      "command": "node",
+      "args": [
+        "D:\\Projects\\Automatic Cover Letter\\backend\\mcp-server.js"
+      ]
+    }
+  }
+}

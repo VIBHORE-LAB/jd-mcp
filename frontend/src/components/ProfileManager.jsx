@@ -3,13 +3,13 @@ import { User, Sparkles, Save, Globe, FileUp, Check, RefreshCw, BookOpen, Slider
 
 export default function ProfileManager() {
   const [activeSubTab, setActiveSubTab] = useState('profile');
-  
+
   const [profileText, setProfileText] = useState('');
   const [profilePath, setProfilePath] = useState('');
-  
+
   const [skillsText, setSkillsText] = useState('');
   const [skillsPath, setSkillsPath] = useState('');
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -18,6 +18,7 @@ export default function ProfileManager() {
   const [scraping, setScraping] = useState(false);
 
   const [cvText, setCvText] = useState('');
+  const [parsingCv, setParsingCv] = useState(false);
 
   const fetchProfileAndSkills = async () => {
     setLoading(true);
@@ -51,7 +52,7 @@ export default function ProfileManager() {
     try {
       const endpoint = activeSubTab === 'profile' ? '/api/profile' : '/api/skills';
       const body = activeSubTab === 'profile' ? { content: profileText } : { content: skillsText };
-      
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,11 +93,49 @@ export default function ProfileManager() {
     }
   };
 
-  const handleAppendCvText = () => {
+  const handleParseAndProcessCv = async (replaceExisting) => {
     if (!cvText.trim()) return;
-    const updated = `${profileText}\n\n## Additional CV Resume Information\n${cvText.trim()}`;
-    setProfileText(updated);
-    setCvText('');
+    setParsingCv(true);
+    try {
+      const parseRes = await fetch('/api/parse-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cvText })
+      });
+      const parseData = await parseRes.json();
+      if (!parseRes.ok || !parseData.success) {
+        throw new Error(parseData.error || 'Failed to parse CV');
+      }
+
+      const parsedMarkdown = parseData.markdown;
+      let updatedProfileText = '';
+      if (replaceExisting) {
+        updatedProfileText = `# Candidate Profile\n\n${parsedMarkdown}`;
+      } else {
+        updatedProfileText = `${profileText}\n\n## Additional CV Resume Information\n${parsedMarkdown}`;
+      }
+
+      setProfileText(updatedProfileText);
+
+      const saveRes = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: updatedProfileText })
+      });
+      const saveData = await saveRes.json();
+      if (saveRes.ok && saveData.success) {
+        setCvText('');
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 2500);
+      } else {
+        throw new Error(saveData.error || 'Failed to save profile');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'An error occurred during CV parsing.');
+    } finally {
+      setParsingCv(false);
+    }
   };
 
   return (
@@ -107,11 +146,10 @@ export default function ProfileManager() {
             <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
               <button
                 onClick={() => setActiveSubTab('profile')}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                  activeSubTab === 'profile'
+                className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${activeSubTab === 'profile'
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <User className="w-4 h-4" />
                 Candidate Data (profile.md)
@@ -119,11 +157,10 @@ export default function ProfileManager() {
 
               <button
                 onClick={() => setActiveSubTab('skills')}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                  activeSubTab === 'skills'
+                className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${activeSubTab === 'skills'
                     ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <Sliders className="w-4 h-4" />
                 AI Skill Rules (skills.md)
@@ -206,10 +243,10 @@ export default function ProfileManager() {
         <div className="glass-panel rounded-2xl p-6 shadow-xl">
           <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-3">
             <FileUp className="w-4 h-4 text-indigo-400" />
-            Append CV / Resume Raw Text
+            Import LaTeX / CV Resume
           </h3>
           <p className="text-xs text-slate-400 mb-4">
-            Paste additional CV text or LaTeX resume snippets to enrich candidate profile.md.
+            Paste CV text or LaTeX code. The system will convert it to Markdown, save it, and update the profile.
           </p>
 
           <div className="space-y-3">
@@ -219,14 +256,24 @@ export default function ProfileManager() {
               placeholder="Paste CV text or LaTeX resume section..."
               className="w-full h-36 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
             />
-            <button
-              onClick={handleAppendCvText}
-              disabled={!cvText.trim()}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-600/20"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Append to Profile Data
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleParseAndProcessCv(false)}
+                disabled={parsingCv || !cvText.trim()}
+                className="py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-600/20"
+              >
+                {parsingCv ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
+                Parse & Append
+              </button>
+              <button
+                onClick={() => handleParseAndProcessCv(true)}
+                disabled={parsingCv || !cvText.trim()}
+                className="py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-50 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                {parsingCv ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Parse & Replace
+              </button>
+            </div>
           </div>
         </div>
       </div>

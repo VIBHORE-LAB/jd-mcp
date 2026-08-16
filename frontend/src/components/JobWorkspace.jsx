@@ -52,7 +52,7 @@ export default function JobWorkspace() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: coverLetter,
-          candidateName: 'Alex Mercer',
+          candidateName: 'Vibhore Mathur',
           jobTitle: customTitle || 'Role',
           companyName: customCompany || 'Company'
         })
@@ -89,7 +89,7 @@ export default function JobWorkspace() {
     if (!newQuestionText.trim()) return;
     const newQa = {
       question: newQuestionText.trim(),
-      answer: `Based on my background, I bring strong experience and proven technical problem-solving capabilities to address ${newQuestionText.trim()}.`
+      answer: `Based on my background, I bring strong full-stack experience and proven technical problem-solving capabilities to address ${newQuestionText.trim()}.`
     };
     setQuestionsAndAnswers([...questionsAndAnswers, newQa]);
     setNewQuestionText('');
@@ -316,7 +316,7 @@ export default function JobWorkspace() {
               onChange={(e) => setNewQuestionText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddQuestion()}
               placeholder="Add custom job question manually..."
-              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
             <button
               onClick={handleAddQuestion}

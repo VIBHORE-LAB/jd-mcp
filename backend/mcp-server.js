@@ -20,7 +20,7 @@ function readProfile() {
     fs.writeFileSync(profilePath, exampleContent, 'utf8');
     return exampleContent;
   }
-  const defaultConfig = '# Candidate Profile\n\n- Name: Candidate\n- Title: Software Engineer\n';
+  const defaultConfig = '# Candidate Profile\n\n- Name: Vibhore Mathur\n- Title: Full Stack Developer\n';
   fs.writeFileSync(profilePath, defaultConfig, 'utf8');
   return defaultConfig;
 }
@@ -185,7 +185,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (name === 'generate_cover_letter') {
     const profile = readProfile();
     const skills = readSkills();
-    const coverLetter = `Hi ${args.company_name} Hiring Team,\n\nWhen I saw your opening for a ${args.job_title}, I wanted to reach out directly. Over the past 6+ years as a full-stack engineer, I've focused on building high-throughput systems and developer tools that solve real operational friction.\n\nBased on my experience recorded in profile.md:\n${profile.substring(0, 450)}...\n\nFollowing skills.md humanization guidelines, I'd welcome the chance to talk through how my background supports what you're building at ${args.company_name}.\n\nBest,\nCandidate`;
+    const coverLetter = `Hi ${args.company_name} Hiring Team,\n\nWhen I saw your opening for a ${args.job_title}, I wanted to reach out directly. Building end-to-end full-stack applications, MCP integrations with OAuth 2.0, and async processing queues with BullMQ/Redis is at the core of my daily engineering work.\n\nBased on my experience recorded in profile.md:\n${profile.substring(0, 450)}...\n\nFollowing skills.md humanization guidelines, I'd welcome the chance to talk through how my background supports what you're building at ${args.company_name}.\n\nBest,\nVibhore Mathur`;
     
     return {
       content: [{ type: 'text', text: coverLetter }]
@@ -197,7 +197,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const questionsList = args.questions || [];
     const answers = questionsList.map(q => ({
       question: q,
-      answer: `Regarding "${q}": Drawing from my work history in profile.md and applying skills.md humanized voice guidelines, I focus on practical execution, clear system design, and direct outcomes.`
+      answer: `Regarding "${q}": Drawing from my full-stack work at Outbox Labs recorded in profile.md (including OAuth 2.0 MCP integrations and BullMQ queues), I focus on practical execution, clean system design, and direct outcomes.`
     }));
 
     return {
