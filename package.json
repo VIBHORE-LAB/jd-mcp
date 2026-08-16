@@ -1,0 +1,11 @@
+{
+  "name": "automatic-cover-letter-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && node server.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "mcp": "cd backend && node mcp-server.js",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  }
+}
