@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "cover-letter": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "cover-letter/SKILL.md",
+      "computedHash": "e5d2de685d987af7201eb65e7bbfe7f057fcc2b210cc9c099ab6a8f43273e215"
+    }
+  }
+}

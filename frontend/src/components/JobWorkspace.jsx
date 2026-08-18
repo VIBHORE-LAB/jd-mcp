@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Download, Copy, Check, FileText, HelpCircle, Building, Briefcase, RefreshCw, Plus, Edit3, Save } from 'lucide-react';
+import { Sparkles, Download, Copy, Check, FileText, HelpCircle, Building, Briefcase, RefreshCw, Plus, Edit3, Save, Mail, Send, Linkedin } from 'lucide-react';
 
 export default function JobWorkspace() {
   const [rawText, setRawText] = useState('');
@@ -15,6 +15,41 @@ export default function JobWorkspace() {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [copiedLetter, setCopiedLetter] = useState(false);
   const [newQuestionText, setNewQuestionText] = useState('');
+  const [activeTab, setActiveTab] = useState('letter');
+  const [targetName, setTargetName] = useState('');
+  const [targetRole, setTargetRole] = useState('recruiter');
+  const [outreach, setOutreach] = useState(null);
+  const [outreachLoading, setOutreachLoading] = useState(false);
+  const [isEditingOutreachEmail, setIsEditingOutreachEmail] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedNote, setCopiedNote] = useState(false);
+  const [copiedDm, setCopiedDm] = useState(false);
+
+  const handleGenerateOutreach = async () => {
+    if (!rawText.trim()) return;
+    setOutreachLoading(true);
+    try {
+      const res = await fetch('/api/generate-outreach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText,
+          targetName,
+          targetRole,
+          customTitle,
+          customCompany
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOutreach(data.outreach);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setOutreachLoading(false);
+    }
+  };
 
   const handleAnalyzeAndGenerate = async () => {
     if (!rawText.trim()) return;
@@ -32,8 +67,8 @@ export default function JobWorkspace() {
         setJobDetails(data.jobDetails);
         setCoverLetter(data.coverLetter);
         setQuestionsAndAnswers(data.questionsAndAnswers || []);
-        if (data.jobDetails.jobTitle && !customTitle) setCustomTitle(data.jobDetails.jobTitle);
-        if (data.jobDetails.companyName && !customCompany) setCustomCompany(data.jobDetails.companyName);
+        if (data.jobDetails.jobTitle) setCustomTitle(data.jobDetails.jobTitle);
+        if (data.jobDetails.companyName) setCustomCompany(data.jobDetails.companyName);
       }
     } catch (err) {
       console.error(err);
@@ -125,7 +160,11 @@ export default function JobWorkspace() {
             <div>
               <textarea
                 value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
+                onChange={(e) => {
+                  setRawText(e.target.value);
+                  setCustomTitle('');
+                  setCustomCompany('');
+                }}
                 placeholder="Paste complete job text here (including questions)..."
                 className="w-full h-56 bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all resize-none"
               />
@@ -210,123 +249,358 @@ export default function JobWorkspace() {
       </div>
 
       <div className="lg:col-span-7 space-y-6">
-        <div className="glass-panel rounded-2xl p-6 shadow-xl relative">
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-400" />
-              Generated Cover Letter
-            </h2>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsEditingLetter(!isEditingLetter)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                {isEditingLetter ? <Save className="w-3.5 h-3.5 text-emerald-400" /> : <Edit3 className="w-3.5 h-3.5 text-indigo-400" />}
-                {isEditingLetter ? 'Save Edit' : 'Edit Text'}
-              </button>
+        <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setActiveTab('letter')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'letter'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Cover Letter
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('qa')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'qa'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+            Q&A Responses
+          </button>
 
-              <button
-                onClick={() => copyToClipboard(coverLetter, 'letter')}
-                disabled={!coverLetter}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer"
-              >
-                {copiedLetter ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                {copiedLetter ? 'Copied' : 'Copy'}
-              </button>
-
-              <button
-                onClick={handleExportPdf}
-                disabled={!coverLetter || exportingPdf}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
-              >
-                {exportingPdf ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                Export PDF
-              </button>
-            </div>
-          </div>
-
-          {coverLetter ? (
-            isEditingLetter ? (
-              <textarea
-                value={coverLetter}
-                onChange={(e) => setCoverLetter(e.target.value)}
-                className="w-full h-96 bg-slate-900 border border-indigo-500/40 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none"
-              />
-            ) : (
-              <div className="bg-slate-900/80 rounded-xl p-6 border border-slate-800/80 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-['Plus_Jakarta_Sans',sans-serif] shadow-inner max-h-[480px] overflow-y-auto">
-                {coverLetter}
-              </div>
-            )
-          ) : (
-            <div className="h-72 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs text-center p-6">
-              <FileText className="w-10 h-10 mb-3 opacity-30 text-indigo-400" />
-              Paste job content on the left and click "Generate Cover Letter" to create your tailored application document.
-            </div>
-          )}
+          <button
+            onClick={() => setActiveTab('outreach')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'outreach'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            Cold Outreach
+          </button>
         </div>
 
-        <div className="glass-panel rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-purple-400" />
-              Detected Job Application Questions ({questionsAndAnswers.length})
-            </h2>
-          </div>
+        {activeTab === 'letter' && (
+          <div className="glass-panel rounded-2xl p-6 shadow-xl relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full filter blur-3xl -z-10 animate-pulse-slow"></div>
+            
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
+              <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-400" />
+                Generated Cover Letter
+              </h2>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsEditingLetter(!isEditingLetter)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {isEditingLetter ? <Save className="w-3.5 h-3.5 text-emerald-400" /> : <Edit3 className="w-3.5 h-3.5 text-indigo-400" />}
+                  {isEditingLetter ? 'Save Edit' : 'Edit Text'}
+                </button>
 
-          <div className="space-y-4 mb-4">
-            {questionsAndAnswers.length > 0 ? (
-              questionsAndAnswers.map((item, idx) => (
-                <div key={idx} className="bg-slate-900/80 rounded-xl p-4 border border-slate-800 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-xs font-semibold text-purple-300 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-mono">
-                        Q{idx + 1}
-                      </span>
-                      {item.question}
-                    </span>
-                    <button
-                      onClick={() => copyToClipboard(item.answer, idx)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-md flex items-center gap-1 transition-all cursor-pointer shrink-0"
-                    >
-                      {copiedIndex === idx ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
-                      {copiedIndex === idx ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  
-                  <textarea
-                    value={item.answer}
-                    onChange={(e) => handleUpdateAnswer(idx, e.target.value)}
-                    className="w-full bg-slate-950/70 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 focus:outline-none focus:border-purple-500/50 resize-none font-sans"
-                    rows={3}
-                  />
+                <button
+                  onClick={() => copyToClipboard(coverLetter, 'letter')}
+                  disabled={!coverLetter}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  {copiedLetter ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                  {copiedLetter ? 'Copied' : 'Copy'}
+                </button>
+
+                <button
+                  onClick={handleExportPdf}
+                  disabled={!coverLetter || exportingPdf}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                >
+                  {exportingPdf ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Export PDF
+                </button>
+              </div>
+            </div>
+
+            {coverLetter ? (
+              isEditingLetter ? (
+                <textarea
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  className="w-full h-96 bg-slate-900 border border-indigo-500/40 rounded-xl p-4 text-xs font-mono text-slate-200 focus:outline-none"
+                />
+              ) : (
+                <div className="bg-slate-900/80 rounded-xl p-6 border border-slate-800/80 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-['Plus_Jakarta_Sans',sans-serif] shadow-inner max-h-[480px] overflow-y-auto">
+                  {coverLetter}
                 </div>
-              ))
+              )
             ) : (
-              <p className="text-xs text-slate-500 italic py-2">
-                No custom questions detected automatically from the job paste yet. You can manually add one below.
-              </p>
+              <div className="h-72 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs text-center p-6">
+                <FileText className="w-10 h-10 mb-3 opacity-30 text-indigo-400" />
+                Paste job content on the left and click "Generate Cover Letter" to create your tailored application document.
+              </div>
             )}
           </div>
+        )}
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newQuestionText}
-              onChange={(e) => setNewQuestionText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddQuestion()}
-              placeholder="Add custom job question manually..."
-              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-            <button
-              onClick={handleAddQuestion}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Question
-            </button>
+        {activeTab === 'qa' && (
+          <div className="glass-panel rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-purple-400" />
+                Detected Job Application Questions ({questionsAndAnswers.length})
+              </h2>
+            </div>
+
+            <div className="space-y-4 mb-4">
+              {questionsAndAnswers.length > 0 ? (
+                questionsAndAnswers.map((item, idx) => (
+                  <div key={idx} className="bg-slate-900/80 rounded-xl p-4 border border-slate-800 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-xs font-semibold text-purple-300 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-mono">
+                          Q{idx + 1}
+                        </span>
+                        {item.question}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(item.answer, idx)}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-md flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                      >
+                        {copiedIndex === idx ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        {copiedIndex === idx ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    
+                    <textarea
+                      value={item.answer}
+                      onChange={(e) => handleUpdateAnswer(idx, e.target.value)}
+                      className="w-full bg-slate-950/70 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 focus:outline-none focus:border-purple-500/50 resize-none font-sans"
+                      rows={3}
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500 italic py-2">
+                  No custom questions detected automatically from the job paste yet. You can manually add one below.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newQuestionText}
+                onChange={(e) => setNewQuestionText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddQuestion()}
+                placeholder="Add custom job question manually..."
+                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+              <button
+                onClick={handleAddQuestion}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Question
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'outreach' && (
+          <div className="glass-panel rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Send className="w-5 h-5 text-sky-400" />
+                Cold Outreach Generator
+              </h2>
+            </div>
+
+            <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+              <h3 className="text-xs font-semibold text-slate-300">Outreach Recipient Settings</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
+                    Contact Name / Email
+                  </label>
+                  <input
+                    type="text"
+                    value={targetName}
+                    onChange={(e) => setTargetName(e.target.value)}
+                    placeholder="e.g. Jane Doe"
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
+                    Contact Role
+                  </label>
+                  <select
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-sans"
+                  >
+                    <option value="recruiter">HR / Recruiter</option>
+                    <option value="manager">Engineering Manager / Tech Lead</option>
+                    <option value="engineer">Software Engineer / Peer</option>
+                    <option value="executive">Executive / Founder</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleGenerateOutreach}
+                disabled={outreachLoading || !rawText.trim()}
+                className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-sky-600/20"
+              >
+                {outreachLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Generating outreach pitch...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate Outreach Messages
+                  </>
+                )}
+              </button>
+            </div>
+
+            {outreach ? (
+              <div className="space-y-6">
+                <div className="bg-slate-900/40 p-5 rounded-xl border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                      Tailored Cold Email
+                    </h3>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsEditingOutreachEmail(!isEditingOutreachEmail)}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-md flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        {isEditingOutreachEmail ? <Save className="w-3 h-3 text-emerald-400" /> : <Edit3 className="w-3 h-3 text-indigo-400" />}
+                        {isEditingOutreachEmail ? 'Save' : 'Edit'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const fullEmail = `Subject: ${outreach.email.subject}\n\n${outreach.email.body}`;
+                          navigator.clipboard.writeText(fullEmail);
+                          setCopiedEmail(true);
+                          setTimeout(() => setCopiedEmail(false), 2000);
+                        }}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-md flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        {copiedEmail ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        {copiedEmail ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-[10px] font-medium text-slate-500 block mb-1">Subject Line</span>
+                      <input
+                        type="text"
+                        value={outreach.email.subject}
+                        onChange={(e) => {
+                          const updated = { ...outreach };
+                          updated.email.subject = e.target.value;
+                          setOutreach(updated);
+                        }}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-medium text-slate-500 block mb-1">Email Body</span>
+                      {isEditingOutreachEmail ? (
+                        <textarea
+                          value={outreach.email.body}
+                          onChange={(e) => {
+                            const updated = { ...outreach };
+                            updated.email.body = e.target.value;
+                            setOutreach(updated);
+                          }}
+                          className="w-full h-64 bg-slate-950 border border-slate-850 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none"
+                        />
+                      ) : (
+                        <div className="bg-slate-950/70 rounded-lg p-4 border border-slate-850 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-sans max-h-64 overflow-y-auto">
+                          {outreach.email.body}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-slate-900/40 p-5 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <Linkedin className="w-3.5 h-3.5 text-sky-400" />
+                        LinkedIn Connection Note (&lt; 300 Chars)
+                      </h3>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(outreach.linkedin.connectionRequest);
+                          setCopiedNote(true);
+                          setTimeout(() => setCopiedNote(false), 2000);
+                        }}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-md flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        {copiedNote ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        {copiedNote ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="bg-slate-950/70 rounded-lg p-3 border border-slate-850 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-sans h-28 overflow-y-auto relative">
+                      {outreach.linkedin.connectionRequest}
+                      <span className="absolute bottom-1 right-2 text-[9px] text-slate-500 font-mono">
+                        {outreach.linkedin.connectionRequest.length} / 300
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/40 p-5 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <Linkedin className="w-3.5 h-3.5 text-sky-400" />
+                        LinkedIn DM / InMail
+                      </h3>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(outreach.linkedin.directMessage);
+                          setCopiedDm(true);
+                          setTimeout(() => setCopiedDm(false), 2000);
+                        }}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-md flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        {copiedDm ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                        {copiedDm ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="bg-slate-950/70 rounded-lg p-3 border border-slate-850 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-sans h-28 overflow-y-auto">
+                      {outreach.linkedin.directMessage}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-48 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs text-center p-6">
+                <Send className="w-10 h-10 mb-3 opacity-30 text-sky-400 animate-pulse-slow" />
+                Fill out the contact name, select their role, and click "Generate Outreach" to create tailored emails and DMs.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
